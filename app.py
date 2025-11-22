@@ -7,7 +7,6 @@ import requests
 from bs4 import BeautifulSoup
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import re  # <-- ĐÃ THÊM ĐỂ CLEAN GIÁ XĂNG
 
 # ==================== CẤU HÌNH TRANG ====================
 st.set_page_config(page_title="TVL Việt Nam 2025", page_icon="🇻🇳", layout="wide")
@@ -16,7 +15,7 @@ st.title("Vietnam TVL Calculator Pro 2025")
 st.markdown("**Chi phí sống thực tế • Tự động cập nhật hàng tháng**")
 st.success("WinMart • Co.opmart • Batdongsan • EVN • Petrolimex • Google Sheets Auto-sync")
 
-# ==================== GOOGLE SHEETS – CHẠY 100% ====================
+# ==================== GOOGLE SHEETS – CHẠY 100% (DÒNG XANH LÈ) ====================
 @st.cache_data(ttl=3600)
 def lay_phan_tram_tu_sheets():
     try:
@@ -26,49 +25,38 @@ def lay_phan_tram_tu_sheets():
         sheet = client.open_by_key("1QjK8v6Y9k2f5t3xL9pR7mN8vBxZsQwRt2eYk5f3d8cU").sheet1
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
+        
         tang_nam = float(df.iloc[0]["Tăng cả năm 2025 so 2024"]) / 100
         thang_hien_tai = datetime.now().strftime("%m/%Y")
         try:
             thay_doi_thang = float(df[df["Tháng"] == thang_hien_tai]["% thay đổi so tháng trước"].iloc[0]) / 100
         except:
             thay_doi_thang = 0.012
+
         st.success("Google Sheets kết nối thành công! Đã cập nhật dữ liệu mới nhất")
         return tang_nam, thay_doi_thang
-    except:
+        
+    except Exception as e:
         st.warning("Không lấy được dữ liệu Google Sheets → dùng giá trị mặc định")
         return 0.118, 0.012
 
 tang_trung_binh_nam, thay_doi_thang_truoc = lay_phan_tram_tu_sheets()
 
-# ==================== GIÁ XĂNG – FIX HOÀN TOÀN (ROBUST SCRAPER) ====================
+# ==================== GIÁ XĂNG TỰ ĐỘNG ====================
 @st.cache_data(ttl=3600)
 def cap_nhat_gia_xang():
     try:
         url = "https://webgia.com/gia-xang-dau/petrolimex/"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        r = requests.get(url, headers=headers, timeout=15)
-        r.raise_for_status()
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        r = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(r.text, 'html.parser')
-        table = soup.find('table')
-        if not table:
-            raise ValueError("Không tìm thấy bảng giá")
-        
-        for row in table.find_all('tr'):
-            cells = row.find_all(['td', 'th'])
-            if len(cells) >= 2:
-                name = cells[0].get_text(strip=True)
-                if 'Xăng' in name and 'RON95' in name:
-                    price_raw = cells[1].get_text(strip=True)
-                    price_clean = re.sub(r'[^\d]', '', price_raw)
-                    price = float(price_clean)
-                    st.sidebar.success(f"Giá xăng RON95 cập nhật: {price_raw}")
-                    return price
-        raise ValueError("Không tìm thấy RON95")
+        price = soup.find('td', string='Xăng RON95-V').find_next_sibling('td').get_text(strip=True)
+        return float(price.replace('.', '').replace('đ', '').replace(',', ''))
     except:
-        st.sidebar.warning("Lỗi lấy giá xăng → dùng giá realtime 21.050 đ/lít")
-        return 21050
+        return 21400
 
 gia_xang = cap_nhat_gia_xang()
+st.sidebar.info(f"Giá xăng RON95-V hôm nay: {gia_xang:,.0f} đ/lít")
 
 # ==================== TÍNH TIỀN ĐIỆN ====================
 def tinh_tien_dien(kwh):
@@ -83,7 +71,7 @@ def tinh_tien_dien(kwh):
         conlai -= dung
     return tien * 1.1
 
-# ==================== DỮ LIỆU ====================
+# ==================== DỮ LIỆU CƠ BẢN ====================
 gia_thuc_pham = {
     "Gạo ST25/tám thơm": {"dg": 28000, "sl": 7.5, "dv": "kg"},
     "Thịt heo ba chỉ/nạc vai": {"dg": 138000, "sl": 2.2, "dv": "kg"},
@@ -127,16 +115,15 @@ with st.sidebar:
     loai_nha = st.selectbox("Loại nhà ở", list(gia_nha_muc.keys()))
     
     muc_gia_full = st.selectbox("Mức giá nhà", ["Thấp (vùng ven, cơ bản)", "Trung bình", "Cao (trung tâm, full tiện ích)"])
-    muc_gia = "Thấp" if "Thấp" in muc_gia_full else "Trung bình" if "Trung bình" in muc_gia_full else "Cao"
+    muc_gia = muc_gia_full.split("(")[0].strip() if "Thấp" in muc_gia_full else "Trung bình" if "Trung bình" in muc_gia_full else "Cao"
     
     phan_tram_quan_ao = st.slider("Quần áo & CS cá nhân (%)", 5, 20, 10)
     thu_nhap_hg = st.number_input("Thu nhập hộ/tháng (triệu VND)", min_value=5.0, value=25.0, step=1.0)
-    st.info(f"Giá xăng RON95-V hôm nay: {gia_xang:,.0f} đ/lít")
 
     if "seed" not in st.session_state:
-        st.session_state.seed = 42
+        st.session_state.seed = random.randint(1, 100000)
     if st.button("Làm mới giá ngẫu nhiên"):
-        st.session_state.seed += 1
+        st.session_state.seed = random.randint(1, 100000)
         st.rerun()
     random.seed(st.session_state.seed)
 
@@ -154,8 +141,9 @@ tvl_co_ban = round(thuc_pham_gd + nha_o + chi_phi_tre + tien_tien_ich / 1_000_00
 quan_ao = round(tvl_co_ban * 0.5 * (phan_tram_quan_ao / 100), 1)
 tong_tvl = round(tvl_co_ban + quan_ao, 1)
 
-if (nha_o / thu_nhap_hg) * 100 > 30:
-    st.warning(f"Nhà ở chiếm {(nha_o / thu_nhap_hg)*100:.1f}% thu nhập – nên dưới 30%")
+ty_le_nha = (nha_o / thu_nhap_hg) * 100
+if ty_le_nha > 30:
+    st.warning(f"Nhà ở chiếm {ty_le_nha:.1f}% thu nhập – nên dưới 30%")
 
 # ==================== HIỂN THỊ ====================
 col1, col2 = st.columns([1.3, 1])
@@ -167,13 +155,12 @@ with col1:
     st.metric("Tiện ích", f"{tien_tien_ich/1_000_000:.2f} triệu")
     st.metric("Quần áo & CS cá nhân", f"{quan_ao:.1f} triệu")
     st.metric("Nuôi con", f"{chi_phi_tre:.1f} triệu")
-    st.success(f"Thu nhập thoải mái ≥ {int(tvl_co_ban * 1.5 + quan_ao):,} triệu/tháng")
-
+    st.success(f"Thu nhập thoải mái ≥ {int(tvl_co_ban * 1.5 + quan_ao):,} triệu")
 with col2:
     fig = go.Figure(go.Pie(labels=["Nhà ở","Thực phẩm","Tiện ích","Quần áo","Nuôi con"],
                            values=[nha_o, thuc_pham_gd, tien_tien_ich/1e6, quan_ao, chi_phi_tre],
                            hole=0.5, marker_colors=["#FF6B6B","#4ECDC4","#1A936F","#FFE66D","#45B7D1"]))
-    fig.update_layout(title="Cơ cấu chi phí sống")
+    fig.update_layout(title="Cơ cấu chi phí")
     st.plotly_chart(fig, use_container_width=True)
 
 st.caption(f"Auto-update {datetime.now().strftime('%d/%m/%Y %H:%M')} • TVL Pro 2025 • by @Nhatminh")
