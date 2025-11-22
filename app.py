@@ -24,15 +24,33 @@ st.sidebar.success("Dữ liệu lạm phát: +11.8%/năm (cập nhật 22/11/202
 def cap_nhat_gia_xang():
     try:
         url = "https://webgia.com/gia-xang-dau/petrolimex/"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        r = requests.get(url, headers=headers, timeout=10)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+        r = requests.get(url, headers=headers, timeout=15)  # Tăng timeout
+        r.raise_for_status()  # Raise nếu HTTP error
         soup = BeautifulSoup(r.text, 'html.parser')
-        price_td = soup.find('td', string='Xăng RON95-V').find_next_sibling('td')
-        price_text = price_td.get_text(strip=True).replace('.', '').replace('đ', '').replace(',', '')
-        return float(price_text)
+        
+        # Tìm linh hoạt hơn: Tìm tất cả rows trong table, strip text
+        table = soup.find('table')  # Giả sử có 1 table chính
+        if not table:
+            raise ValueError("Không tìm thấy table giá xăng")
+        
+        rows = table.find_all('tr')
+        for row in rows:
+            cells = row.find_all('td')
+            if len(cells) >= 2:
+                name_cell = cells[0].get_text(strip=True)  # Strip khoảng trắng
+                if 'RON95' in name_cell and 'Xăng' in name_cell:  # Linh hoạt hơn "Xăng RON95-V"
+                    price_text = cells[1].get_text(strip=True)
+                    price_clean = price_text.replace('.', '').replace('đ', '').replace(' ', '').replace(',', '')
+                    price = float(price_clean)
+                    st.sidebar.success(f"Giá xăng RON95 cập nhật thành công: {price_text}")  # Debug xanh
+                    return price
+        
+        raise ValueError("Không tìm thấy dòng Xăng RON95 trong table")
+        
     except Exception as e:
-        st.warning(f"Lỗi lấy giá xăng: {e} – dùng giá mặc định")
-        return 21400  # Giá mới nhất 22/11/2025
+        st.sidebar.warning(f"Lỗi lấy giá xăng ({str(e)}) – dùng giá mặc định 21.050 đ/lít")
+        return 21050  # Giá realtime mới nhất 22/11/2025
 
 gia_xang = cap_nhat_gia_xang()
 st.sidebar.info(f"Giá xăng RON95-V hôm nay: {gia_xang:,.0f} đ/lít")
@@ -226,3 +244,4 @@ st.plotly_chart(fig_bar, use_container_width=True)
 
 st.markdown("---")
 st.caption(f"🚀 Auto-update {datetime.now().strftime('%d/%m/%Y %H:%M')} | TVL Pro 2025 | Made with ❤️ by @Nhatminh | Không cần Google Sheets nữa!")
+
