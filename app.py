@@ -3,31 +3,32 @@ import random
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
-import requests
-from bs4 import BeautifulSoup
 
 st.set_page_config(page_title="TVL Việt Nam 2025", page_icon="Vietnam", layout="wide")
 st.markdown("<style>.big-font {font-size: 56px !important; font-weight: bold; text-align: center;}</style>", unsafe_allow_html=True)
 
 st.title("Vietnam TVL Calculator Pro 2025")
 st.markdown("**Chi phí sống thực tế – Chính xác hơn Numbeo 40% • Dữ liệu siêu thị 11/2025**")
-st.success("Big C • WinMart • Co.opmart • Batdongsan • Petrolimex • Cập nhật 22/11/2025")
+st.success("Big C • WinMart • Co.op Online • Batdongsan • Petrolimex • Cập nhật 22/11/2025")
 
-# ==================== GIÁ XĂNG TỰ ĐỘNG ====================
-@st.cache_data(ttl=3600*24)
+# ==================== GIÁ XĂNG (có fallback, không cần requests) ====================
+@st.cache_data(ttl=3600*6)  # Cache 6 tiếng
 def cap_nhat_gia_xang():
     try:
+        import requests
+        from bs4 import BeautifulSoup
         url = "https://webgia.com/gia-xang-dau/petrolimex/"
-        r = requests.get(url, timeout=10)
+        r = requests.get(url, timeout=8)
         soup = BeautifulSoup(r.text, 'html.parser')
-        price_str = soup.find('td', string='Xăng RON95-V').find_next_sibling('td').text
-        return float(price_str.replace('.', '').replace('đ', ''))
+        price = soup.find('td', string='Xăng RON95-V').find_next_sibling('td').text
+        return float(price.replace('.', '').replace('đ', ''))
     except:
-        return 20542
-gia_xang = cap_nhat_gia_xang()
-st.sidebar.info(f"Giá xăng RON95-V hôm nay: {gia_xang:,.0f} đ/lít")
+        return 20542  # Giá thực tế 22/11/2025
 
-# ==================== TÍNH ĐIỆN CHUẨN BẬC THANG ====================
+gia_xang = cap_nhat_gia_xang()
+st.sidebar.info(f"Giá xăng RON95-V hiện tại: {gia_xang:,.0f} đ/lít")
+
+# ==================== TÍNH ĐIỆN THEO BẬC THANG ====================
 def tinh_tien_dien(kwh):
     bac = [1984, 2050, 2380, 2998, 3350, 3460]
     limit = [50, 50, 100, 100, 100, float('inf')]
@@ -40,37 +41,28 @@ def tinh_tien_dien(kwh):
         conlai -= dung
     return tien * 1.1
 
-# ==================== THỰC PHẨM + LINK NGUỒN THẬT TẾ ====================
+# ==================== THỰC PHẨM + LINK TỔNG QUÁT SIÊU THỊ (luôn mở được) ====================
 thuc_pham_chi_tiet = {
-    "Gạo ST25 / tám thơm (7-8kg)":           {"gia": 28_000 * 7.5,  "link": "https://www.bigonlinestore.vn/gao-st25-dacsan-5kg"},
-    "Thịt heo nạc/ba chỉ (2-2.5kg)":         {"gia": 138_000 * 2.2, "link": "https://winmart.vn/san-pham/thit-heo-ba-chi"},
-    "Thịt bò nội (0.8-1kg)":                 {"gia": 280_000 * 0.8, "link": "https://www.bigonlinestore.vn/thit-bo-nac-vai"},
-    "Cá tươi (cá lóc, rô, thu – 2kg)":       {"gia": 95_000 * 2.0,  "link": "https://cooponline.vn/ca-loc-song"},
-    "Trứng gà/ta (35-40 quả)":               {"gia": 3_800 * 38,    "link": "https://winmart.vn/san-pham/trung-ga-ta-10-qua"},
-    "Sữa tươi Vinamilk/TH (10 lít)":         {"gia": 26_500 * 10,   "link": "https://www.bigonlinestore.vn/sua-tuoi-tiet-trung-vinamilk-1l"},
-    "Rau củ + trái cây (22-25kg)":           {"gia": 30_000 * 23,   "link": "https://cooponline.vn/rau-cu-qua-tuoi"},
-    "Ăn ngoài + cơm sáng (16-18 bữa)":       {"gia": 45_000 * 17,   "link": "https://shopeefood.vn/ho-chi-minh/com-tam"},
-    "Dầu ăn, gia vị, nước mắm":              {"gia": 160_000,       "link": "https://winmart.vn/dau-an-tuong-an"},
-    "Mì gói, snack, bánh kẹo":               {"gia": 120_000,       "link": "https://www.bigonlinestore.vn/mi-omachi"},
-    "Cà phê, trà, nước ngọt":                {"gia": 160_000,       "link": "https://winmart.vn/ca-phe-highlands"},
+    "Gạo ST25 / tám thơm":           {"gia": 28_000 * 7.5,  "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=gao+st25", "win": "https://winmart.vn/tim-kiem?key=gao+st25", "coop": "https://cooponline.vn/tim-kiem?q=gao+st25"},
+    "Thịt heo nạc/ba chỉ":           {"gia": 138_000 * 2.2, "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=thit+heo", "win": "https://winmart.vn/thit-tuoi", "coop": "https://cooponline.vn/thit-heo"},
+    "Thịt bò nội":                   {"gia": 280_000 * 0.8, "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=thit+bo", "win": "https://winmart.vn/thit-tuoi", "coop": "https://cooponline.vn/thit-bo"},
+    "Cá tươi (lóc, rô, thu)":        {"gia": 95_000 * 2.0,  "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=ca+tuoi", "win": "https://winmart.vn/hai-san-tuoi-song", "coop": "https://cooponline.vn/ca-tuoi"},
+    "Trứng gà/ta":                   {"gia": 3_800 * 38,    "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=trung+ga", "win": "https://winmart.vn/trung-cac-loai", "coop": "https://cooponline.vn/trung-ga"},
+    "Sữa tươi Vinamilk/TH":          {"gia": 26_500 * 10,   "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=sua+tuoi", "win": "https://winmart.vn/sua-tuoi", "coop": "https://cooponline.vn/sua-tuoi"},
+    "Rau củ + trái cây":             {"gia": 30_000 * 23,   "bigc": "https://www.bigonlinestore.vn/rau-cu-qua", "win": "https://winmart.vn/rau-cu-qua", "coop": "https://cooponline.vn/rau-cu-qua"},
+    "Ăn ngoài + cơm sáng":           {"gia": 45_000 * 17,   "bigc": "", "win": "", "coop": "", "note": "Cơm tấm, phở, bún bò... (ShopeeFood/Grab)"},
+    "Dầu ăn, gia vị, nước mắm":      {"gia": 160_000,       "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=dau+an", "win": "https://winmart.vn/dau-an-gia-vi", "coop": "https://cooponline.vn/dau-an"},
+    "Mì gói, snack, bánh kẹo":       {"gia": 120_000,       "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=mi+goi", "win": "https://winmart.vn/mi-goi-snack", "coop": "https://cooponline.vn/mi-goi"},
+    "Cà phê, trà, nước ngọt":        {"gia": 160_000,       "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=ca+phe", "win": "https://winmart.vn/do-uong", "coop": "https://cooponline.vn/nuoc-giai-khat"},
 }
+
 tong_1_nguoi_food = sum(item["gia"] for item in thuc_pham_chi_tiet.values()) * random.uniform(0.95, 1.06)
 
-# ==================== DỮ LIỆU QUẬN & NHÀ Ở ====================
-heso_quan = {
-    "Quận 1": 1.50, "Quận 3": 1.45, "Quận 5": 1.30, "Quận 10": 1.25,
-    "Bình Thạnh": 1.20, "Phú Nhuận": 1.18, "Quận 7": 1.25, "Quận 2 (cũ)": 1.35,
-    "Thủ Đức (TP)": 1.05, "Gò Vấp": 0.95, "Tân Bình": 1.10, "Bình Tân": 0.85,
-    "Quận 9 (cũ)": 0.90, "Quận 12": 0.80, "Hóc Môn": 0.70, "Bình Chánh": 0.70,
-    "Hoàn Kiếm": 1.60, "Ba Đình": 1.55, "Đống Đa": 1.35, "Hai Bà Trưng": 1.30,
-    "Cầu Giấy": 1.30, "Thanh Xuân": 1.20, "Nam Từ Liêm": 1.15, "Bắc Từ Liêm": 1.05,
-    "Tây Hồ": 1.45, "Long Biên": 0.95, "Hà Đông": 0.90, "Đông Anh": 0.75,
-}
+# ==================== DỮ LIỆU QUẬN, NHÀ Ở... (giữ nguyên) ====================
+heso_quan = { "Quận 1": 1.50, "Quận 3": 1.45, "Quận 5": 1.30, "Quận 10": 1.25, "Bình Thạnh": 1.20, "Phú Nhuận": 1.18, "Quận 7": 1.25, "Quận 2 (cũ)": 1.35, "Thủ Đức (TP)": 1.05, "Gò Vấp": 0.95, "Tân Bình": 1.10, "Bình Tân": 0.85, "Quận 9 (cũ)": 0.90, "Quận 12": 0.80, "Hóc Môn": 0.70, "Bình Chánh": 0.70, "Hoàn Kiếm": 1.60, "Ba Đình": 1.55, "Đống Đa": 1.35, "Hai Bà Trưng": 1.30, "Cầu Giấy": 1.30, "Thanh Xuân": 1.20, "Nam Từ Liêm": 1.15, "Bắc Từ Liêm": 1.05, "Tây Hồ": 1.45, "Long Biên": 0.95, "Hà Đông": 0.90, "Đông Anh": 0.75, }
 
-hcm_districts = ["Quận 1","Quận 3","Quận 5","Quận 10","Bình Thạnh","Phú Nhuận","Quận 7","Quận 2 (cũ)",
-                 "Thủ Đức (TP)","Gò Vấp","Tân Bình","Bình Tân","Quận 9 (cũ)","Quận 12","Hóc Môn","Bình Chánh"]
-hn_districts = ["Hoàn Kiếm","Ba Đình","Đống Đa","Hai Bà Trưng","Cầu Giấy","Thanh Xuân",
-                "Nam Từ Liêm","Bắc Từ Liêm","Tây Hồ","Long Biên","Hà Đông","Đông Anh"]
+hcm_districts = ["Quận 1","Quận 3","Quận 5","Quận 10","Bình Thạnh","Phú Nhuận","Quận 7","Quận 2 (cũ)","Thủ Đức (TP)","Gò Vấp","Tân Bình","Bình Tân","Quận 9 (cũ)","Quận 12","Hóc Môn","Bình Chánh"]
+hn_districts = ["Hoàn Kiếm","Ba Đình","Đống Đa","Hai Bà Trưng","Cầu Giấy","Thanh Xuân","Nam Từ Liêm","Bắc Từ Liêm","Tây Hồ","Long Biên","Hà Đông","Đông Anh"]
 
 gia_nha = {
     "Phòng trọ 15-20m²":                  {"TP.HCM": 3.8, "Hà Nội": 3.0},
@@ -93,9 +85,7 @@ with st.sidebar:
     ho_gd = st.selectbox("Hộ gia đình", list(heso_gd.keys()), index=2)
     loai_nha = st.selectbox("Loại nhà ở", list(gia_nha.keys()))
     phan_tram_quan_ao = st.slider("Mua sắm quần áo & CS cá nhân (% thu nhập khả dụng)", 5, 20, 10)
-    
-    if st.button("Refresh giá ngẫu nhiên"):
-        st.rerun()
+    if st.button("Refresh giá ngẫu nhiên"): st.rerun()
 
 # ==================== TÍNH TOÁN ====================
 thuc_pham_gd = (tong_1_nguoi_food / 1_000_000) * heso_gd[ho_gd]
@@ -103,29 +93,24 @@ nha_o = gia_nha[loai_nha][thanhpho] * heso_quan[quan] * random.uniform(0.92, 1.1
 chi_phi_tre = nuoi_con[ho_gd]
 
 nhom = "Độc thân" if ho_gd == "Độc thân" else "Vợ chồng" if ho_gd == "Vợ chồng" else "Gia đình có con"
-kwh_range = {"Độc thân": (120,220), "Vợ chồng": (250,380), "Gia đình có con": (420,650)}
-nuoc_range = {"Độc thân": (80_000,140_000), "Vợ chồng": (180_000,280_000), "Gia đình có con": (320_000,480_000)}
-
-tien_dien = tinh_tien_dien(random.uniform(*kwh_range[nhom]))
-tien_nuoc = random.uniform(*nuoc_range[nhom])
+tien_dien = tinh_tien_dien(random.uniform(120,650) if nhom == "Gia đình có con" else random.uniform(120,380) if nhom == "Vợ chồng" else random.uniform(120,220))
+tien_nuoc = random.uniform(80_000,480_000) if nhom == "Gia đình có con" else random.uniform(180_000,280_000) if nhom == "Vợ chồng" else random.uniform(80_000,140_000)
 tien_xang = random.uniform(32,48) * gia_xang * (1 if ho_gd == "Độc thân" else 2)
 tien_internet = 300_000
 tien_sua_xe = random.uniform(280_000, 450_000) * (1 if ho_gd == "Độc thân" else 2)
-
 tien_tien_ich = tien_dien + tien_nuoc + tien_xang + tien_internet + tien_sua_xe
-tvl_co_ban = round(thuc_pham_gd + nha_o + chi_phi_tre + tien_tien_ich/1_000_000, 1)
 
+tvl_co_ban = round(thuc_pham_gd + nha_o + chi_phi_tre + tien_tien_ich/1_000_000, 1)
 thu_nhap_thoai_mai = tvl_co_ban * 1.5
 thu_nhap_kha_dung = thu_nhap_thoai_mai * 0.5
 quan_ao = round(thu_nhap_kha_dung * (phan_tram_quan_ao / 100), 1)
 tong_tvl = round(tvl_co_ban + quan_ao, 1)
 
-# ==================== HIỂN THỊ ====================
+# ==================== HIỂN THỊ KẾT QUẢ ====================
 col1, col2 = st.columns([1.3, 1])
 with col1:
     color = "#4ECDC4" if tong_tvl <= 16 else "#FFBE0B" if tong_tvl <= 25 else "#FF4444"
     st.markdown(f"<p class='big-font' style='color:{color}'>TVL ≈ {tong_tvl:,} triệu/tháng</p>", unsafe_allow_html=True)
-    
     st.metric("Quận/Huyện", quan)
     st.metric("Nhà ở", f"{nha_o:.1f} triệu")
     st.metric("Thực phẩm + sinh hoạt", f"{thuc_pham_gd:.1f} triệu")
@@ -135,27 +120,28 @@ with col1:
     st.success(f"Thu nhập cần để sống thoải mái: **{int(thu_nhap_thoai_mai + quan_ao):,} triệu** trở lên")
 
 with col2:
-    fig = go.Figure(data=[go.Pie(
-        labels=["Nhà ở","Thực phẩm","Tiện ích+Sửa xe","Quần áo","Nuôi con"],
-        values=[nha_o, thuc_pham_gd, tien_tien_ich/1_000_000, quan_ao, chi_phi_tre],
-        hole=0.5, marker_colors=["#FF6B6B","#4ECDC4","#1A936F","#FFE66D","#45B7D1"],
-        textinfo='label+percent', textposition='inside'
-    )])
+    fig = go.Figure(data=[go.Pie(labels=["Nhà ở","Thực phẩm","Tiện ích+Sửa xe","Quần áo","Nuôi con"],
+                                 values=[nha_o, thuc_pham_gd, tien_tien_ich/1_000_000, quan_ao, chi_phi_tre],
+                                 hole=0.5, marker_colors=["#FF6B6B","#4ECDC4","#1A936F","#FFE66D","#45B7D1"],
+                                 textinfo='label+percent', textposition='inside')])
     fig.update_layout(title="Cơ cấu chi phí sống")
     st.plotly_chart(fig, use_container_width=True)
 
-# ==================== BẢNG CHI TIẾT CÓ LINK NGUỒN ====================
-st.subheader("Chi tiết thực phẩm & sinh hoạt (1 người lớn/tháng) – Click tên để xem giá siêu thị")
+# ==================== BẢNG CHI TIẾT CÓ 3 LINK SIÊU THỊ ====================
+st.subheader("Chi tiết thực phẩm (1 người/tháng) – Click để xem giá thực tế")
 data = []
 for ten, info in thuc_pham_chi_tiet.items():
-    gia = info["gia"]
-    link = info["link"]
-    ten_san_pham = ten.split(" (")[0]
+    bigc = f"[Big C]({info['bigc']})" if 'bigc' in info and info['bigc'] else "-"
+    win = f"[WinMart]({info['win']})" if 'win' in info and info['win'] else "-"
+    coop = f"[Co.op Online]({info['coop']})" if 'coop' in info and info['coop'] else "-"
     data.append({
-        "Mặt hàng": f"[{ten_san_pham}]({link})",
-        "Chi phí": f"{gia:,.0f} đ"
+        "Mặt hàng": ten.split(" (")[0],
+        "Chi phí": f"{info['gia']:,.0f} đ",
+        "Big C": bigc,
+        "WinMart": win,
+        "Co.op": coop
     })
 df = pd.DataFrame(data)
 st.markdown(df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-st.caption(f"Auto-update {datetime.now().strftime('%d/%m/%Y %H:%M')} • TVL Pro 2025 • Nguồn dữ liệu siêu thị có link trích dẫn • by @Nhatminh")
+st.caption(f"Auto-update {datetime.now().strftime('%d/%m/%Y %H:%M')} • TVL Pro 2025 • Link siêu thị tổng quát – luôn mở được • by @Nhatminh")
