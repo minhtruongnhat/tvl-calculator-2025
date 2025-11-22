@@ -30,12 +30,13 @@ st.sidebar.info(f"Giá xăng RON95-V hôm nay: {gia_xang:,.0f} đ/lít")
 
 # ==================== TÍNH TIỀN ĐIỆN THEO BẬC THANG 2025 ====================
 def tinh_tien_dien(kwh):
-    bac = [1984, 2050, 2380, 2998, 3350, 3460]  # đ/kWh
+    bac = [1984, 2050, 2380, 2998, 3350, 3460]
     limit = [50, 50, 100, 100, 100, float('inf')]
     tien = 0
     conlai = kwh
     for i in range(6):
-        if conlai <= 0: break
+        if conlai <= 0:
+            break
         dung = min(conlai, limit[i])
         tien += dung * bac[i]
         conlai -= dung
@@ -155,14 +156,14 @@ st.dataframe(df_food, use_container_width=True, hide_index=True)
 st.markdown("---")
 st.subheader("So sánh TVL năm 2025 với năm 2024 (dữ liệu thực tế)")
 
-tang_trung_binh_nam = 0.118   # +11.8% từ 2024 → 2025 (thực phẩm +3.8%, thuê nhà +12-18%, xăng -10.6%, điện +4.8%)
+tang_trung_binh_nam = 0.118   # +11.8% từ 2024 → 2025
 tvl_nam_nay = tong_tvl
 tvl_nam_truoc = round(tvl_nam_nay / (1 + tang_trung_binh_nam), 1)
 
 c1, c2 = st.columns(2)
 with c1:
     st.metric("Năm 2025 (hiện tại)", f"{tvl_nam_nay:,} triệu/tháng")
-	with c2:
+with c2:
     delta_nam = round((tvl_nam_nay - tvl_nam_truoc) / tvl_nam_truoc * 100, 1)
     st.metric("Năm 2024 (thực tế)", f"{tvl_nam_truoc:,} triệu/tháng", f"{delta_nam:+}%")
 
@@ -184,7 +185,7 @@ st.info("Dữ liệu thực tế 2024 → 2025:\n"
 st.markdown("---")
 st.subheader("So sánh TVL tháng 11/2025 với tháng 10/2025 (dữ liệu thực tế)")
 
-thay_doi_thang_truoc = 0.012   # +1.2% (thực phẩm +0.69%, thuê nhà +0.8%, xăng ổn định)
+thay_doi_thang_truoc = 0.012   # +1.2%
 tvl_thang_truoc = round(tvl_nam_nay / (1 + thay_doi_thang_truoc), 1)
 
 cA, cB = st.columns(2)
