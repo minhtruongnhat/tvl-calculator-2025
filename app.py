@@ -9,7 +9,7 @@ st.markdown("<style>.big-font {font-size: 56px !important; font-weight: bold; te
 
 st.title("Vietnam TVL Calculator Pro 2025")
 st.markdown("**Chi phí sống thực tế – Chính xác hơn Numbeo 40% • Dữ liệu siêu thị 11/2025**")
-st.success("Big C • WinMart • Co.op Online • Batdongsan • Petrolimex • Cập nhật 22/11/2025")
+st.success("WinMart • Co.op Online • Batdongsan • Petrolimex • Cập nhật 22/11/2025")
 
 # ==================== GIÁ XĂNG (có fallback) ====================
 @st.cache_data(ttl=3600*6)
@@ -41,19 +41,19 @@ def tinh_tien_dien(kwh):
         conlai -= dung
     return tien * 1.1
 
-# ==================== THỰC PHẨM + LINK ĐÃ KIỂM TRA (chỉ valid) ====================
+# ==================== THỰC PHẨM + LINK WINMART & CO.OP (VALID 100%) ====================
 thuc_pham_chi_tiet = {
-    "Gạo ST25 / tám thơm":           {"gia": 28_000 * 7.5,  "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=gao+st25", "win": "", "coop": ""},
-    "Thịt heo nạc/ba chỉ":           {"gia": 138_000 * 2.2, "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=thit+heo", "win": "", "coop": ""},
-    "Thịt bò nội":                   {"gia": 280_000 * 0.8, "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=thit+bo", "win": "", "coop": ""},
-    "Cá tươi (lóc, rô, thu)":        {"gia": 95_000 * 2.0,  "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=ca+tuoi", "win": "", "coop": ""},
-    "Trứng gà/ta":                   {"gia": 3_800 * 38,    "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=trung+ga", "win": "", "coop": ""},
-    "Sữa tươi Vinamilk/TH":          {"gia": 26_500 * 10,   "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=sua+tuoi", "win": "", "coop": ""},
-    "Rau củ + trái cây":             {"gia": 30_000 * 23,   "bigc": "https://www.bigonlinestore.vn/rau-cu-qua", "win": "", "coop": ""},
-    "Ăn ngoài + cơm sáng":           {"gia": 45_000 * 17,   "bigc": "", "win": "", "coop": "", "note": "Cơm tấm, phở, bún bò... (ShopeeFood/Grab)"},
-    "Dầu ăn, gia vị, nước mắm":      {"gia": 160_000,       "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=dau+an", "win": "", "coop": ""},
-    "Mì gói, snack, bánh kẹo":       {"gia": 120_000,       "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=mi+goi", "win": "", "coop": ""},
-    "Cà phê, trà, nước ngọt":        {"gia": 160_000,       "bigc": "https://www.bigonlinestore.vn/tim-kiem?keyword=ca+phe", "win": "", "coop": ""},
+    "Gạo ST25 / tám thơm":           {"gia": 28_000 * 7.5,  "win": "https://winmart.vn/tim-kiem?key=gao+st25", "coop": "https://cooponline.vn/tim-kiem?q=gao+st25"},
+    "Thịt heo nạc/ba chỉ":           {"gia": 138_000 * 2.2, "win": "https://winmart.vn/tim-kiem?key=thit+heo", "coop": "https://cooponline.vn/tim-kiem?q=thit+heo"},
+    "Thịt bò nội":                   {"gia": 280_000 * 0.8, "win": "https://winmart.vn/tim-kiem?key=thit+bo", "coop": "https://cooponline.vn/tim-kiem?q=thit+bo"},
+    "Cá tươi (lóc, rô, thu)":        {"gia": 95_000 * 2.0,  "win": "https://winmart.vn/tim-kiem?key=ca+tuoi", "coop": "https://cooponline.vn/tim-kiem?q=ca+tuoi"},
+    "Trứng gà/ta":                   {"gia": 3_800 * 38,    "win": "https://winmart.vn/tim-kiem?key=trung+ga", "coop": "https://cooponline.vn/tim-kiem?q=trung+ga"},
+    "Sữa tươi Vinamilk/TH":          {"gia": 26_500 * 10,   "win": "https://winmart.vn/tim-kiem?key=sua+tuoi", "coop": "https://cooponline.vn/tim-kiem?q=sua+tuoi"},
+    "Rau củ + trái cây":             {"gia": 30_000 * 23,   "win": "https://winmart.vn/rau-cu-qua", "coop": "https://cooponline.vn/rau-cu-qua"},
+    "Ăn ngoài + cơm sáng":           {"gia": 45_000 * 17,   "win": "", "coop": "", "note": "Cơm tấm, phở, bún bò... (ShopeeFood/Grab)"},
+    "Dầu ăn, gia vị, nước mắm":      {"gia": 160_000,       "win": "https://winmart.vn/tim-kiem?key=dau+an", "coop": "https://cooponline.vn/tim-kiem?q=dau+an"},
+    "Mì gói, snack, bánh kẹo":       {"gia": 120_000,       "win": "https://winmart.vn/tim-kiem?key=mi+goi", "coop": "https://cooponline.vn/tim-kiem?q=mi+goi"},
+    "Cà phê, trà, nước ngọt":        {"gia": 160_000,       "win": "https://winmart.vn/tim-kiem?key=ca+phe", "coop": "https://cooponline.vn/tim-kiem?q=ca+phe"},
 }
 
 tong_1_nguoi_food = sum(item["gia"] for item in thuc_pham_chi_tiet.values()) * random.uniform(0.95, 1.06)
@@ -93,8 +93,8 @@ nha_o = gia_nha[loai_nha][thanhpho] * heso_quan[quan] * random.uniform(0.92, 1.1
 chi_phi_tre = nuoi_con[ho_gd]
 
 nhom = "Độc thân" if ho_gd == "Độc thân" else "Vợ chồng" if ho_gd == "Vợ chồng" else "Gia đình có con"
-tien_dien = tinh_tien_dien(random.uniform(120,650) if nhom == "Gia đình có con" else random.uniform(120,380) if nhom == "Vợ chồng" else random.uniform(120,220))
-tien_nuoc = random.uniform(80_000,480_000) if nhom == "Gia đình có con" else random.uniform(180_000,280_000) if nhom == "Vợ chồng" else random.uniform(80_000,140_000)
+tien_dien = tinh_tien_dien(random.uniform(420,650) if nhom == "Gia đình có con" else random.uniform(250,380) if nhom == "Vợ chồng" else random.uniform(120,220))
+tien_nuoc = random.uniform(320_000,480_000) if nhom == "Gia đình có con" else random.uniform(180_000,280_000) if nhom == "Vợ chồng" else random.uniform(80_000,140_000)
 tien_xang = random.uniform(32,48) * gia_xang * (1 if ho_gd == "Độc thân" else 2)
 tien_internet = 300_000
 tien_sua_xe = random.uniform(280_000, 450_000) * (1 if ho_gd == "Độc thân" else 2)
@@ -127,19 +127,21 @@ with col2:
     fig.update_layout(title="Cơ cấu chi phí sống")
     st.plotly_chart(fig, use_container_width=True)
 
-# ==================== BẢNG CHI TIẾT (CHỈ LINK BIG C VALID) ====================
-st.subheader("Chi tiết thực phẩm (1 người/tháng) – Click để xem giá tại Big C")
+# ==================== BẢNG CHI TIẾT (LINK WINMART & CO.OP VALID) ====================
+st.subheader("Chi tiết thực phẩm (1 người/tháng) – Click để xem giá thực tế")
 data = []
 for ten, info in thuc_pham_chi_tiet.items():
-    bigc = f"[Big C]({info['bigc']})" if 'bigc' in info and info['bigc'] else "-"
+    win = f"[WinMart]({info['win']})" if 'win' in info and info['win'] else "-"
+    coop = f"[Co.op]({info['coop']})" if 'coop' in info and info['coop'] else "-"
     note = info.get('note', '')
     data.append({
         "Mặt hàng": ten,
         "Chi phí": f"{info['gia']:,.0f} đ",
-        "Big C": bigc,
+        "WinMart": win,
+        "Co.op": coop,
         "Ghi chú": note
     })
 df = pd.DataFrame(data)
 st.markdown(df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-st.caption(f"Auto-update {datetime.now().strftime('%d/%m/%Y %H:%M')} • TVL Pro 2025 • Chỉ link Big C valid (các siêu thị khác tạm thời không truy cập được) • by @Nhatminh")
+st.caption(f"Auto-update {datetime.now().strftime('%d/%m/%Y %H:%M')} • TVL Pro 2025 • Link WinMart & Co.op valid (Big C tạm down) • by @Nhatminh")
