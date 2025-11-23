@@ -15,26 +15,31 @@ st.title("Vietnam TVL Calculator Pro 2025")
 st.markdown("**Chi phí sống thực tế • Dự báo Tăng trưởng 2025**")
 st.success("Dữ liệu tự động cập nhật qua CSV API (Google Sheets) và Web Scraper (Giá xăng)")
 
-# ==================== TỰ ĐỘNG LẤY % TĂNG GIÁ TỪ URL CSV (CẬP NHẬT ID MỚI) ====================
+# ==================== TỰ ĐỘNG LẤY % TĂNG GIÁ TỪ URL CSV (SỬA LỖI URL) ====================
 @st.cache_data(ttl=3600)
 def lay_phan_tram_tu_sheets_csv():
     """Tải dữ liệu lạm phát từ Sheets qua URL xuất CSV công khai."""
     
-    # ĐÃ CẬP NHẬT ID SHEETS MỚI CỦA BẠN
     SHEET_ID = "16qRG7AahDM5OO6VamxtC3OnrvOLMlwpxkI_oNBJrrDQ"
-    GID = "0" # Sheet đầu tiên (gid=0)
-    CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID}"
+    GID = "0" 
+    
+    # *** ĐÃ SỬA URL SANG ĐỊNH DẠNG EXPORT TRỰC TIẾP ***
+    CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
     
     try:
         response = requests.get(CSV_URL, timeout=10)
         response.raise_for_status() 
         
+        # Đảm bảo phản hồi là CSV hợp lệ (chủ yếu kiểm tra nếu Sheet không công khai, sẽ lỗi ở đây)
+        if "google drive" in response.text.lower():
+             raise ValueError("File is not publicly accessible or structure is incorrect.")
+             
         df = pd.read_csv(io.StringIO(response.text))
         
-        # Lấy Tăng cả năm (Giả định cột vẫn là "Tăng cả năm 2025 so 2024")
+        # Lấy Tăng cả năm
         tang_nam = float(df.iloc[0]["Tăng cả năm 2025 so 2024"]) / 100
         
-        # Lấy Thay đổi tháng (Giả định cột vẫn là "Tháng" và "% thay đổi so tháng trước")
+        # Lấy Thay đổi tháng
         thang_hien_tai = datetime.now().strftime("%m/%Y")
         try:
             thay_doi_thang = float(df[df["Tháng"] == thang_hien_tai]["% thay đổi so tháng trước"].iloc[0]) / 100
