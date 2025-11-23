@@ -263,7 +263,7 @@ if 'scrap_status' in st.session_state:
         if success_rate > 70:
             st.metric("Trạng thái", "✅ Thành công", delta="Dữ liệu real-time")
         elif success_rate > 30:
-            st.metric("Trạng thái", ⚠️ Một phần", delta="Dùng kết hợp")
+            st.metric("Trạng thái", "⚠️ Một phần", delta="Dùng kết hợp")
         else:
             st.metric("Trạng thái", "❌ Thất bại", delta="Dùng mặc định", delta_color="inverse")
 
