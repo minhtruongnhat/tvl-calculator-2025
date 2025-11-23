@@ -4,8 +4,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 import requests
+from bs4 import BeautifulSoup
 import re
-import io # Cần thiết để đọc CSV từ response
+import io 
 
 # ==================== CẤU HÌNH TRANG ====================
 st.set_page_config(page_title="TVL Việt Nam 2025", page_icon="🇻🇳", layout="wide")
@@ -14,25 +15,26 @@ st.title("Vietnam TVL Calculator Pro 2025")
 st.markdown("**Chi phí sống thực tế • Dự báo Tăng trưởng 2025**")
 st.success("Dữ liệu tự động cập nhật qua CSV API (Google Sheets) và Web Scraper (Giá xăng)")
 
-# ==================== TỰ ĐỘNG LẤY % TĂNG GIÁ TỪ URL CSV (THAY THẾ GOPY SPREADSHEET) ====================
+# ==================== TỰ ĐỘNG LẤY % TĂNG GIÁ TỪ URL CSV (CẬP NHẬT ID MỚI) ====================
 @st.cache_data(ttl=3600)
 def lay_phan_tram_tu_sheets_csv():
     """Tải dữ liệu lạm phát từ Sheets qua URL xuất CSV công khai."""
-    SHEET_ID = "1QjK8v6Y9k2f5t3xL9pR7mN8vBxZsQwRt2eYk5f3d8cU"
-    GID = "0" 
+    
+    # ĐÃ CẬP NHẬT ID SHEETS MỚI CỦA BẠN
+    SHEET_ID = "16qRG7AahDM5OO6VamxtC3OnrvOLMlwpxkI_oNBJrrDQ"
+    GID = "0" # Sheet đầu tiên (gid=0)
     CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID}"
     
     try:
         response = requests.get(CSV_URL, timeout=10)
         response.raise_for_status() 
         
-        # Đọc dữ liệu trực tiếp bằng pandas
         df = pd.read_csv(io.StringIO(response.text))
         
-        # Lấy Tăng cả năm
+        # Lấy Tăng cả năm (Giả định cột vẫn là "Tăng cả năm 2025 so 2024")
         tang_nam = float(df.iloc[0]["Tăng cả năm 2025 so 2024"]) / 100
         
-        # Lấy Thay đổi tháng
+        # Lấy Thay đổi tháng (Giả định cột vẫn là "Tháng" và "% thay đổi so tháng trước")
         thang_hien_tai = datetime.now().strftime("%m/%Y")
         try:
             thay_doi_thang = float(df[df["Tháng"] == thang_hien_tai]["% thay đổi so tháng trước"].iloc[0]) / 100
@@ -42,19 +44,19 @@ def lay_phan_tram_tu_sheets_csv():
         return tang_nam, thay_doi_thang, True
         
     except Exception as e:
-        # st.warning/st.toast sẽ được gọi bên ngoài hàm cache
+        # Fallback values nếu kết nối hoặc đọc dữ liệu thất bại
         return 0.118, 0.012, False 
 
 tang_trung_binh_nam, thay_doi_thang_truoc, sheets_success = lay_phan_tram_tu_sheets_csv()
 
-# Hiển thị trạng thái kết nối bên ngoài hàm cache
+# Hiển thị trạng thái kết nối 
 if sheets_success:
     st.success(f"Dữ liệu lạm phát (năm {tang_trung_binh_nam*100:.1f}%) cập nhật thành công qua CSV API.")
 else:
-    st.warning("Lỗi kết nối CSV API → dùng giá trị mặc định (Tăng trưởng năm 11.8%).")
+    st.warning("Lỗi kết nối CSV API → dùng giá trị mặc định (Tăng trưởng năm 11.8%). Vui lòng kiểm tra quyền chia sẻ của Google Sheet mới.")
 
 
-# ==================== GIÁ XĂNG TỰ ĐỘNG (ĐÃ SỬA LỖI SCRAPER) ====================
+# ==================== GIÁ XĂNG TỰ ĐỘNG ====================
 @st.cache_data(ttl=86400)
 def cap_nhat_gia_xang():
     GIA_XANG_MAC_DINH = 21050
@@ -93,7 +95,7 @@ def tinh_tien_dien(kwh):
         conlai -= dung
     return tien * 1.1
 
-# ==================== DỮ LIỆU CƠ SỞ ====================
+# ==================== DỮ LIỆU CƠ SỞ (GIỮ NGUYÊN) ====================
 gia_thuc_pham = {
     "Gạo ST25/tám thơm": {"dg": 28000, "sl": 7.5, "dv": "kg"}, "Thịt heo ba chỉ/nạc vai": {"dg": 138000, "sl": 2.2, "dv": "kg"},
     "Thịt bò nội": {"dg": 280000, "sl": 0.8, "dv": "kg"}, "Cá tươi (trắm, rô phi…)": {"dg": 95000, "sl": 2.0, "dv": "kg"},
@@ -141,7 +143,7 @@ with st.sidebar:
         
     if st.button("Làm mới giá ngẫu nhiên"): st.rerun()
 
-# ==================== TÍNH TOÁN TVL (ĐÃ SỬA LỖI LẠM PHÁT VÀ LOGIC) ====================
+# ==================== TÍNH TOÁN TVL ====================
 
 # 1. Chi phí Thực phẩm (Biến động + Lạm phát)
 tong_1_nguoi_food_base = sum(item["dg"] * item["sl"] for item in gia_thuc_pham.values())
@@ -161,7 +163,7 @@ chi_phi_tre = round(chi_phi_tre, 2)
 
 # 4. Chi phí Tiện ích (Điện/Xăng Realtime + Nước/Cố định có Lạm phát)
 kwh_tieu_thu = random.uniform(150, 650)
-tien_dien = tinh_tien_dien(kwh_tieu_thu) # Không lạm phát vì tính theo bậc thang EVN
+tien_dien = tinh_tien_dien(kwh_tieu_thu) 
 tien_nuoc_final = random.uniform(100_000, 500_000) * (1 + tang_trung_binh_nam)
 tien_xang_base = random.uniform(35, 50) * gia_xang * (1 if "Độc thân" in ho_gd else 2)
 tien_co_dinh_final = (300_000 + random.uniform(300_000, 500_000)) * (1 + tang_trung_binh_nam)
@@ -171,7 +173,7 @@ tien_tien_ich = tien_dien + tien_nuoc_final + tien_xang_base + tien_co_dinh_fina
 # 5. Tổng hợp TVL cơ bản
 tvl_co_ban = thuc_pham_gd + nha_o + chi_phi_tre + tien_tien_ich/1_000_000
 
-# 6. Chi phí Quần áo (SỬA LỖI LOGIC: Tính theo % Chi phí Cơ bản Tùy nghi)
+# 6. Chi phí Quần áo (Tính theo % Chi phí Cơ bản Tùy nghi)
 chi_phi_phu = thuc_pham_gd + tien_tien_ich/1_000_000 
 quan_ao = round(chi_phi_phu * (phan_tram_quan_ao / 100), 2)
 tong_tvl = round(tvl_co_ban + quan_ao, 2)
