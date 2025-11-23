@@ -132,94 +132,6 @@ def scrap_gia_sieu_thi():
 
     return gia_sieu_thi, scrap_status
 
-# ==================== SCRAP GIÁ THUÊ NHÀ REAL-TIME ====================
-@st.cache_data(ttl=43200)  # Cache 12 giờ
-def scrap_gia_thue_nha_real_time(thanhpho, quan, loai_nha):
-    """
-    Scrap giá thuê nhà real-time từ các trang bất động sản
-    """
-    gia_thue_actual = None
-    scrap_status_nha = {
-        'success': False,
-        'source': '',
-        'price_range': '',
-        'sample_size': 0,
-        'last_updated': datetime.now().isoformat()
-    }
-    
-    try:
-        # Mapping loại nhà sang từ khóa tìm kiếm
-        loai_nha_keywords = {
-            "Phòng trọ/căn hộ nhỏ 15-20m²": ["phòng trọ", "phòng đơn", "căn hộ mini"],
-            "Studio 25-35m² (full nội thất cơ bản)": ["studio", "căn hộ studio"],
-            "Căn hộ 1PN tầm trung (50-70m²)": ["căn hộ 1 phòng ngủ", "1pn"],
-            "Căn hộ 2PN tầm trung (70-90m²)": ["căn hộ 2 phòng ngủ", "2pn"],
-            "Căn hộ 3PN tầm thấp (100-120m²)": ["căn hộ 3 phòng ngủ", "3pn"]
-        }
-        
-        keywords = loai_nha_keywords.get(loai_nha, ["căn hộ"])
-        
-        # Giá mô phỏng dựa trên real-time data pattern
-        # Trong thực tế, bạn sẽ scrap từ batdongsan.com, chotot.com, etc.
-        
-        base_prices = {
-            "TP.HCM": {
-                "Quận 1": {"min": 8.0, "max": 25.0},
-                "Quận 3": {"min": 7.5, "max": 22.0},
-                "Quận 7": {"min": 6.5, "max": 18.0},
-                "Bình Thạnh": {"min": 5.5, "max": 15.0},
-                "Phú Nhuận": {"min": 5.0, "max": 14.0},
-                "Thủ Đức (TP)": {"min": 4.5, "max": 12.0},
-                "Gò Vấp": {"min": 4.0, "max": 10.0},
-                "Tân Bình": {"min": 4.5, "max": 11.0},
-                "Bình Tân": {"min": 3.5, "max": 9.0},
-            },
-            "Hà Nội": {
-                "Hoàn Kiếm": {"min": 7.0, "max": 20.0},
-                "Ba Đình": {"min": 6.5, "max": 18.0},
-                "Cầu Giấy": {"min": 5.5, "max": 15.0},
-                "Tây Hồ": {"min": 6.0, "max": 16.0},
-                "Đống Đa": {"min": 5.0, "max": 14.0},
-                "Thanh Xuân": {"min": 4.5, "max": 12.0},
-                "Hà Đông": {"min": 4.0, "max": 10.0},
-                "Long Biên": {"min": 4.0, "max": 11.0},
-            }
-        }
-        
-        # Điều chỉnh theo loại nhà
-        loai_nha_multiplier = {
-            "Phòng trọ/căn hộ nhỏ 15-20m²": 0.4,
-            "Studio 25-35m² (full nội thất cơ bản)": 0.7,
-            "Căn hộ 1PN tầm trung (50-70m²)": 1.0,
-            "Căn hộ 2PN tầm trung (70-90m²)": 1.5,
-            "Căn hộ 3PN tầm thấp (100-120m²)": 2.0
-        }
-        
-        if thanhpho in base_prices and quan in base_prices[thanhpho]:
-            base_range = base_prices[thanhpho][quan]
-            multiplier = loai_nha_multiplier.get(loai_nha, 1.0)
-            
-            # Tạo giá ngẫu nhiên trong khoảng thực tế
-            min_price = base_range["min"] * multiplier
-            max_price = base_range["max"] * multiplier
-            
-            # Thêm biến động thị trường real-time (±15%)
-            market_volatility = random.uniform(0.85, 1.15)
-            gia_thue_actual = random.uniform(min_price, max_price) * market_volatility
-            
-            scrap_status_nha.update({
-                'success': True,
-                'source': 'Batdongsan.com + Chotot.com',
-                'price_range': f"{min_price:.1f} - {max_price:.1f} triệu",
-                'sample_size': random.randint(15, 45),
-                'actual_price': gia_thue_actual
-            })
-            
-    except Exception as e:
-        scrap_status_nha['error'] = str(e)
-    
-    return gia_thue_actual, scrap_status_nha
-
 # ==================== TỰ ĐỘNG LẤY % TĂNG GIÁ TỪ GOOGLE SHEETS ====================
 @st.cache_data(ttl=3600)
 def lay_phan_tram_tu_sheets():
@@ -311,23 +223,13 @@ with st.sidebar:
     phan_tram_quan_ao = st.slider("Quần áo & CS cá nhân (%)", 5, 20, 10)
     
     st.markdown("---")
-    st.header("🔄 Cập nhật real-time")
+    st.header("🔄 Cập nhật giá thực phẩm")
     
-    col_scrap1, col_scrap2 = st.columns(2)
-    
-    with col_scrap1:
-        if st.button("🔍 Scrap giá thực phẩm", type="primary", use_container_width=True):
-            with st.spinner("Đang lấy giá real-time từ siêu thị..."):
-                st.session_state.gia_sieu_thi, st.session_state.scrap_status = scrap_gia_sieu_thi()
-                st.session_state.last_scrap_time = datetime.now()
-                st.rerun()
-    
-    with col_scrap2:
-        if st.button("🏠 Scrap giá thuê nhà", type="secondary", use_container_width=True):
-            with st.spinner("Đang lấy giá thuê nhà real-time..."):
-                st.session_state.gia_thue_nha_real_time, st.session_state.scrap_status_nha = scrap_gia_thue_nha_real_time(thanhpho, quan, loai_nha)
-                st.session_state.last_scrap_nha_time = datetime.now()
-                st.rerun()
+    if st.button("🔍 Scrap giá mới nhất từ siêu thị", type="primary"):
+        with st.spinner("Đang lấy giá real-time từ siêu thị..."):
+            st.session_state.gia_sieu_thi, st.session_state.scrap_status = scrap_gia_sieu_thi()
+            st.session_state.last_scrap_time = datetime.now()
+            st.rerun()
 
 # ==================== LẤY GIÁ THỰC PHẨM ====================
 if 'gia_sieu_thi' not in st.session_state:
@@ -335,17 +237,11 @@ if 'gia_sieu_thi' not in st.session_state:
         st.session_state.gia_sieu_thi, st.session_state.scrap_status = scrap_gia_sieu_thi()
         st.session_state.last_scrap_time = datetime.now()
 
-# ==================== LẤY GIÁ THUÊ NHÀ REAL-TIME ====================
-if 'gia_thue_nha_real_time' not in st.session_state:
-    with st.spinner("🏠 Đang phân tích giá thuê nhà thị trường..."):
-        st.session_state.gia_thue_nha_real_time, st.session_state.scrap_status_nha = scrap_gia_thue_nha_real_time(thanhpho, quan, loai_nha)
-        st.session_state.last_scrap_nha_time = datetime.now()
-
 # ==================== HIỂN THỊ TRẠNG THÁI SCRAP ====================
 st.markdown("---")
-st.subheader("📊 Trạng thái dữ liệu real-time")
+st.subheader("📊 Trạng thái dữ liệu giá thực phẩm")
 
-# Hiển thị thông tin scrap thực phẩm
+# Hiển thị thông tin scrap
 if 'scrap_status' in st.session_state:
     status = st.session_state.scrap_status
     success_rate = (status['successful'] / status['total_attempted'] * 100) if status['total_attempted'] > 0 else 0
@@ -353,54 +249,27 @@ if 'scrap_status' in st.session_state:
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("🛒 Sản phẩm đã scrap", f"{status['successful']}/{status['total_attempted']}")
+        st.metric("Sản phẩm đã scrap", f"{status['successful']}/{status['total_attempted']}")
     
     with col2:
-        st.metric("📈 Tỷ lệ thành công", f"{success_rate:.1f}%")
+        st.metric("Tỷ lệ thành công", f"{success_rate:.1f}%")
     
     with col3:
         if 'last_scrap_time' in st.session_state:
             last_time = st.session_state.last_scrap_time
-            st.metric("🕒 Cập nhật thực phẩm", last_time.strftime("%H:%M %d/%m"))
+            st.metric("Lần cuối cập nhật", last_time.strftime("%H:%M %d/%m"))
     
     with col4:
         if success_rate > 70:
-            st.metric("🎯 Trạng thái", "✅ Thành công", delta="Dữ liệu real-time")
+            st.metric("Trạng thái", "✅ Thành công", delta="Dữ liệu real-time")
         elif success_rate > 30:
-            st.metric("🎯 Trạng thái", "⚠️ Một phần", delta="Dùng kết hợp")
+            st.metric("Trạng thái", "⚠️ Một phần", delta="Dùng kết hợp")
         else:
-            st.metric("🎯 Trạng thái", "❌ Thất bại", delta="Dùng mặc định", delta_color="inverse")
-
-# Hiển thị thông tin scrap giá thuê nhà
-if 'scrap_status_nha' in st.session_state:
-    status_nha = st.session_state.scrap_status_nha
-    
-    col_nha1, col_nha2, col_nha3, col_nha4 = st.columns(4)
-    
-    with col_nha1:
-        if status_nha['success']:
-            st.metric("🏠 Giá thuê real-time", f"{status_nha['actual_price']:.1f} triệu")
-        else:
-            st.metric("🏠 Giá thuê real-time", "N/A")
-    
-    with col_nha2:
-        st.metric("📊 Mẫu dữ liệu", f"{status_nha.get('sample_size', 0)} tin")
-    
-    with col_nha3:
-        if 'last_scrap_nha_time' in st.session_state:
-            last_time_nha = st.session_state.last_scrap_nha_time
-            st.metric("🕒 Cập nhật nhà", last_time_nha.strftime("%H:%M %d/%m"))
-    
-    with col_nha4:
-        if status_nha['success']:
-            st.metric("🎯 Nguồn", status_nha['source'], delta="Real-time")
-        else:
-            st.metric("🎯 Nguồn", "Mặc định", delta_color="off")
+            st.metric("Trạng thái", "❌ Thất bại", delta="Dùng mặc định", delta_color="inverse")
 
 # Hiển thị chi tiết nguồn dữ liệu
-st.markdown("#### 📋 Chi tiết theo nguồn:")
-
 if 'scrap_status' in st.session_state:
+    st.markdown("#### 📋 Chi tiết theo nguồn:")
     for source, info in st.session_state.scrap_status['sources'].items():
         success_count = info.get('successful', 0)
         attempted = info.get('attempted', 0)
@@ -408,26 +277,16 @@ if 'scrap_status' in st.session_state:
         
         if success_rate > 80:
             st.markdown(f'<div class="scrap-success">'
-                       f'<strong>🛒 {source}:</strong> {success_count}/{attempted} sản phẩm ✅'
+                       f'<strong>{source}:</strong> {success_count}/{attempted} sản phẩm ✅'
                        f'</div>', unsafe_allow_html=True)
         elif success_rate > 40:
             st.markdown(f'<div class="scrap-warning">'
-                       f'<strong>🛒 {source}:</strong> {success_count}/{attempted} sản phẩm ⚠️'
+                       f'<strong>{source}:</strong> {success_count}/{attempted} sản phẩm ⚠️'
                        f'</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="scrap-error">'
-                       f'<strong>🛒 {source}:</strong> {success_count}/{attempted} sản phẩm ❌'
+                       f'<strong>{source}:</strong> {success_count}/{attempted} sản phẩm ❌'
                        f'</div>', unsafe_allow_html=True)
-
-# Hiển thị thông tin giá thuê nhà
-if 'scrap_status_nha' in st.session_state and st.session_state.scrap_status_nha['success']:
-    status_nha = st.session_state.scrap_status_nha
-    st.markdown(f'<div class="scrap-success">'
-               f'<strong>🏠 {status_nha["source"]}:</strong> '
-               f'Giá thuê thực tế: <strong>{status_nha["actual_price"]:.1f} triệu</strong> | '
-               f'Khoảng giá: {status_nha["price_range"]} triệu | '
-               f'Mẫu: {status_nha["sample_size"]} tin đăng ✅'
-               f'</div>', unsafe_allow_html=True)
 
 # ==================== KẾT HỢP DỮ LIỆU SCRAP VÀ MẶC ĐỊNH ====================
 gia_thuc_pham = gia_thuc_pham_mac_dinh.copy()
@@ -459,24 +318,26 @@ if st.session_state.gia_sieu_thi:
                 "source": "scrap real-time (mới)"
             }
 
-# ==================== TÍNH TOÁN TVL VỚI GIÁ THUÊ NHÀ REAL-TIME ====================
+# Hiển thị thống kê sử dụng dữ liệu
+st.markdown("#### 🎯 Dữ liệu đang sử dụng:")
+total_products = len(gia_thuc_pham)
+scrap_percentage = (scrap_products_used / total_products * 100) if total_products > 0 else 0
+
+st.info(f"""
+**Tổng hợp:**
+- **{scrap_products_used} sản phẩm** đang dùng giá scrap real-time ({scrap_percentage:.1f}%)
+- **{total_products - scrap_products_used} sản phẩm** đang dùng giá mặc định
+- Dữ liệu được cập nhật tự định mỗi 24h
+""")
+
+# ==================== TÍNH TOÁN TVL ====================
 gia_xang = cap_nhat_gia_xang()
 st.sidebar.info(f"⛽ Giá xăng RON95-V hôm nay: {gia_xang:,.0f} đ/lít")
 
 tong_1_nguoi_food = sum(item["dg"] * item["sl"] for item in gia_thuc_pham.values()) * random.uniform(0.95, 1.06)
 thuc_pham_gd = (tong_1_nguoi_food / 1_000_000) * heso_gd[ho_gd]
 
-# Sử dụng giá thuê real-time nếu có, nếu không dùng giá mặc định
-if (st.session_state.gia_thue_nha_real_time and 
-    st.session_state.scrap_status_nha.get('success', False)):
-    nha_o = st.session_state.gia_thue_nha_real_time
-    nha_o_source = "🏠 REAL-TIME"
-    nha_o_note = f"(Real-time từ {st.session_state.scrap_status_nha['source']})"
-else:
-    nha_o = gia_nha[loai_nha][thanhpho] * heso_quan[quan] * random.uniform(0.93, 1.09)
-    nha_o_source = "⚪ MẶC ĐỊNH"
-    nha_o_note = "(Dữ liệu mặc định)"
-
+nha_o = gia_nha[loai_nha][thanhpho] * heso_quan[quan] * random.uniform(0.93, 1.09)
 chi_phi_tre = nuoi_con[ho_gd]
 
 tien_dien = tinh_tien_dien(random.uniform(150, 650))
@@ -498,7 +359,7 @@ with col1:
     st.markdown(f"<p class='big-font' style='color:{color}'>TVL ≈ {tong_tvl:,} triệu/tháng</p>", unsafe_allow_html=True)
     
     # Hiển thị nguồn dữ liệu cho từng hạng mục
-    st.metric("Nhà ở", f"{nha_o:.1f} triệu", help=nha_o_note)
+    st.metric("Nhà ở", f"{nha_o:.1f} triệu")
     st.metric("Thực phẩm + sinh hoạt", f"{thuc_pham_gd:.1f} triệu", 
               help=f"Dựa trên {scrap_products_used} sản phẩm real-time")
     st.metric("Tiện ích", f"{tien_tien_ich/1_000_000:.2f} triệu")
@@ -542,10 +403,30 @@ df_thuc_pham = pd.DataFrame(data)
 # Tô màu cho bảng dựa trên nguồn dữ liệu
 def color_source(val):
     if "REAL-TIME" in val:
-        return 'background-color:
-def color_source(val):
-    if "REAL-TIME" in val:
         return 'background-color: #d4edda; color: #155724; font-weight: bold;'
     else:
         return 'background-color: #f8f9fa; color: #6c757d;'
 
+styled_df = df_thuc_pham.style.applymap(color_source, subset=['Nguồn'])
+
+st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+# ==================== SO SÁNH NĂM & THÁNG ====================
+st.markdown("---")
+st.subheader("📈 So sánh tự động từ Google Sheets")
+
+c1, c2 = st.columns(2)
+with c1:
+    st.metric("Năm 2025", f"{tong_tvl:,} triệu/tháng")
+with c2:
+    tvl_2024 = round(tong_tvl / (1 + tang_trung_binh_nam), 1)
+    st.metric("Năm 2024", f"{tvl_2024:,} triệu/tháng", f"+{tang_trung_binh_nam*100:.1f}%")
+
+c3, c4 = st.columns(2)
+with c3:
+    st.metric(f"Tháng {datetime.now():%m/%Y}", f"{tong_tvl:,} triệu/tháng")
+with c4:
+    tvl_thang_truoc = round(tong_tvl / (1 + thay_doi_thang_truoc), 1)
+    st.metric("Tháng trước", f"{tvl_thang_truoc:,} triệu/tháng", f"+{thay_doi_thang_truoc*100:.1f}%")
+
+st.caption(f"🕒 Auto-update {datetime.now().strftime('%d/%m/%Y %H:%M')} • TVL Pro 2025 • by @Nhatminh")
