@@ -1,5 +1,4 @@
 import streamlit as st
-import random
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
@@ -9,14 +8,18 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 # ==================== CẤU HÌNH TRANG ====================
-st.set_page_config(page_title="TVL Việt Nam 2025", page_icon="Vietnam", layout="wide")
-st.markdown("<style>.big-font {font-size: 56px !important; font-weight: bold; text-align: center;}</style>", unsafe_allow_html=True)
+st.set_page_config(page_title="TVL Việt Nam 2025", page_icon="🇻🇳", layout="wide")
+st.markdown("""
+<style>
+    .big-font {font-size: 56px !important; font-weight: bold; text-align: center;}
+</style>
+""", unsafe_allow_html=True)
 
 st.title("Vietnam TVL Calculator Pro 2025")
-st.markdown("**Chi phí sống thực tế • Tự động cập nhật hàng tháng**")
-st.success("WinMart • Co.opmart • Batdongsan • EVN • Petrolimex • Google Sheets Auto-sync")
+st.markdown("**Chi phí sống thực tế • Không ngẫu nhiên • Cập nhật theo thị trường**")
+st.success("Giá nhà thuê sát thực tế 2025 • EVN • Petrolimex • Google Sheets")
 
-# ==================== TỰ ĐỘNG LẤY % TĂNG GIÁ TỪ GOOGLE SHEETS ====================
+# ==================== GOOGLE SHEETS ====================
 @st.cache_data(ttl=3600)
 def lay_phan_tram_tu_sheets():
     try:
@@ -38,7 +41,7 @@ def lay_phan_tram_tu_sheets():
 
 tang_trung_binh_nam, thay_doi_thang_truoc = lay_phan_tram_tu_sheets()
 
-# ==================== GIÁ XĂNG TỰ ĐỘNG ====================
+# ==================== GIÁ XĂNG ====================
 @st.cache_data(ttl=86400)
 def cap_nhat_gia_xang():
     try:
@@ -51,7 +54,6 @@ def cap_nhat_gia_xang():
         return 21050
 
 gia_xang = cap_nhat_gia_xang()
-st.sidebar.info(f"Giá xăng RON95-V hôm nay: {gia_xang:,.0f} đ/lít")
 
 # ==================== TÍNH TIỀN ĐIỆN BẬC THANG ====================
 def tinh_tien_dien(kwh):
@@ -66,7 +68,7 @@ def tinh_tien_dien(kwh):
         conlai -= dung
     return tien * 1.1
 
-# ==================== DỮ LIỆU THỰC PHẨM ====================
+# ==================== DỮ LIỆU THỰC PHẨM (CỐ ĐỊNH) ====================
 gia_thuc_pham = {
     "Gạo ST25/tám thơm":              {"dg": 28000,  "sl": 7.5,  "dv": "kg"},
     "Thịt heo ba chỉ/nạc vai":        {"dg": 138000, "sl": 2.2,  "dv": "kg"},
@@ -81,21 +83,24 @@ gia_thuc_pham = {
     "Cà phê, trà, nước ngọt":         {"dg": 160000, "sl": 1,    "dv": ""},
 }
 
-# ==================== HỆ SỐ QUẬN & GIÁ NHÀ TẦM TRUNG/THẤP CẤP ====================
-heso_quan = {"Quận 1": 1.50, "Quận 3": 1.45, "Quận 7": 1.25, "Bình Thạnh": 1.20, "Phú Nhuận": 1.18,
-             "Thủ Đức (TP)": 1.05, "Gò Vấp": 0.95, "Tân Bình": 1.10, "Bình Tân": 0.85,
-             "Hoàn Kiếm": 1.60, "Ba Đình": 1.55, "Cầu Giấy": 1.30, "Tây Hồ": 1.45, "Đống Đa": 1.35,
-             "Thanh Xuân": 1.20, "Hà Đông": 0.90, "Long Biên": 0.95}
+# ==================== HỆ SỐ QUẬN & GIÁ NHÀ (CẬP NHẬT 2025) ====================
+heso_quan = {
+    "Quận 1": 1.50, "Quận 3": 1.45, "Quận 7": 1.25, "Bình Thạnh": 1.20, "Phú Nhuận": 1.18,
+    "Thủ Đức (TP)": 1.05, "Gò Vấp": 0.95, "Tân Bình": 1.10, "Bình Tân": 0.85,
+    "Hoàn Kiếm": 1.60, "Ba Đình": 1.55, "Cầu Giấy": 1.30, "Tây Hồ": 1.45, "Đống Đa": 1.35,
+    "Thanh Xuân": 1.20, "Hà Đông": 0.90, "Long Biên": 0.95
+}
 
 hcm_districts = ["Quận 1","Quận 3","Quận 7","Bình Thạnh","Phú Nhuận","Thủ Đức (TP)","Gò Vấp","Tân Bình","Bình Tân"]
 hn_districts = ["Hoàn Kiếm","Ba Đình","Cầu Giấy","Tây Hồ","Đống Đa","Thanh Xuân","Hà Đông","Long Biên"]
 
+# Giá thuê tham chiếu (triệu đồng/tháng) — đã điều chỉnh sát thực tế 2025
 gia_nha = {
-    "Phòng trọ/căn hộ nhỏ 15-20m²":           {"TP.HCM": 3.8, "Hà Nội": 3.3},
-    "Studio 25-35m² (full nội thất cơ bản)":  {"TP.HCM": 7.2, "Hà Nội": 8.0},
-    "Căn hộ 1PN tầm trung (50-70m²)":         {"TP.HCM": 13.5, "Hà Nội": 16.5},
-    "Căn hộ 2PN tầm trung (70-90m²)":         {"TP.HCM": 18.0, "Hà Nội": 22.0},
-    "Căn hộ 3PN tầm thấp (100-120m²)":        {"TP.HCM": 24.0, "Hà Nội": 28.0},
+    "Phòng trọ/căn hộ nhỏ 15-20m²":           {"TP.HCM": 3.2, "Hà Nội": 2.8},
+    "Studio 25-35m² (full nội thất cơ bản)":  {"TP.HCM": 6.0, "Hà Nội": 6.5},
+    "Căn hộ 1PN tầm trung (50-70m²)":         {"TP.HCM": 10.5, "Hà Nội": 13.0},
+    "Căn hộ 2PN tầm trung (70-90m²)":         {"TP.HCM": 14.5, "Hà Nội": 17.5},
+    "Căn hộ 3PN tầm thấp (100-120m²)":        {"TP.HCM": 20.0, "Hà Nội": 24.0},
 }
 
 heso_gd = {"Độc thân": 1.0, "Vợ chồng": 1.55, "Vợ chồng +1 con": 2.0, "Vợ chồng +2 con": 2.4}
@@ -110,33 +115,44 @@ with st.sidebar:
     ho_gd = st.selectbox("Hộ gia đình", list(heso_gd.keys()), index=2)
     loai_nha = st.selectbox("Loại nhà ở", list(gia_nha.keys()))
     phan_tram_quan_ao = st.slider("Quần áo & CS cá nhân (%)", 5, 20, 10)
-    if st.button("Làm mới giá ngẫu nhiên"): st.rerun()
+    st.info(f"⛽ Giá xăng: {gia_xang:,.0f} đ/lít")
 
-# ==================== TÍNH TOÁN TVL ====================
-tong_1_nguoi_food = sum(item["dg"] * item["sl"] for item in gia_thuc_pham.values()) * random.uniform(0.95, 1.06)
-thuc_pham_gd = (tong_1_nguoi_food / 1_000_000) * heso_gd[ho_gd]
+# ==================== TÍNH TOÁN TVL (KHÔNG DÙNG RANDOM) ====================
+# Thực phẩm
+tong_food = sum(item["dg"] * item["sl"] for item in gia_thuc_pham.values())
+thuc_pham_gd = (tong_food / 1_000_000) * heso_gd[ho_gd]
 
-nha_o = gia_nha[loai_nha][thanhpho] * heso_quan[quan] * random.uniform(0.93, 1.09)
+# Nhà ở
+nha_o = gia_nha[loai_nha][thanhpho] * heso_quan[quan]
+
+# Nuôi con
 chi_phi_tre = nuoi_con[ho_gd]
 
-tien_dien = tinh_tien_dien(random.uniform(150, 650))
-tien_nuoc = random.uniform(100_000, 500_000)
-tien_xang = random.uniform(35, 50) * gia_xang * (1 if "Độc thân" in ho_gd else 2)
-tien_tien_ich = tien_dien + tien_nuoc + tien_xang + 300_000 + random.uniform(300_000, 500_000)
+# Tiện ích
+tien_dien = tinh_tien_dien(400)          # 400 kWh/tháng
+tien_nuoc = 350_000                      # nước sinh hoạt
+lit_xang = 42                            # lít xăng/tháng
+he_so_xang = 1 if ho_gd == "Độc thân" else 2
+tien_xang = lit_xang * gia_xang * he_so_xang
+chi_phi_khac = 400_000                   # internet, gas, rác, di động...
+tien_tien_ich = tien_dien + tien_nuoc + tien_xang + chi_phi_khac
 
-tvl_co_ban = round(thuc_pham_gd + nha_o + chi_phi_tre + tien_tien_ich/1_000_000, 1)
+# Tổng TVL
+tvl_co_ban = thuc_pham_gd + nha_o + chi_phi_tre + (tien_tien_ich / 1_000_000)
+tvl_co_ban = round(tvl_co_ban, 1)
+
 thu_nhap_kha_dung = tvl_co_ban * 1.5 * 0.5
 quan_ao = round(thu_nhap_kha_dung * (phan_tram_quan_ao / 100), 1)
 tong_tvl = round(tvl_co_ban + quan_ao, 1)
 
-# ==================== HIỂN THỊ CHÍNH ====================
+# ==================== HIỂN THỊ KẾT QUẢ ====================
 col1, col2 = st.columns([1.3, 1])
 with col1:
     color = "#4ECDC4" if tong_tvl <= 16 else "#FFBE0B" if tong_tvl <= 25 else "#FF4444"
     st.markdown(f"<p class='big-font' style='color:{color}'>TVL ≈ {tong_tvl:,} triệu/tháng</p>", unsafe_allow_html=True)
     st.metric("Nhà ở", f"{nha_o:.1f} triệu")
     st.metric("Thực phẩm + sinh hoạt", f"{thuc_pham_gd:.1f} triệu")
-    st.metric("Tiện ích", f"{tien_tien_ich/1_000_000:.2f} triệu")
+    st.metric("Tiện ích", f"{tien_tien_ich/1e6:.2f} triệu")
     st.metric("Quần áo & CS cá nhân", f"{quan_ao:.1f} triệu")
     st.metric("Nuôi con", f"{chi_phi_tre:.1f} triệu")
     st.success(f"Thu nhập thoải mái ≥ **{int(tvl_co_ban*1.5 + quan_ao):,} triệu/tháng**")
@@ -154,18 +170,18 @@ with col2:
 
 # ==================== BẢNG CHI TIẾT THỰC PHẨM ====================
 st.markdown("---")
-st.subheader("Chi tiết giá thực phẩm & sinh hoạt (1 người lớn/tháng)")
-
+st.subheader("🧮 Chi tiết chi tiêu thực phẩm (1 người/tháng)")
 data = []
 for ten, info in gia_thuc_pham.items():
-    thanh_tien = info["dg"] * info["sl"]
-    so_luong = f"{info['sl']} {info['dv']}" if info['dv'] else ""
-    data.append({"Mặt hàng": ten, "Đơn giá": f"{info['dg']:,.0f} đ", "Số lượng": so_luong, "Thành tiền": f"{thanh_tien:,.0f} đ"})
-st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
+    tt = info["dg"] * info["sl"]
+    sl = f"{info['sl']} {info['dv']}" if info['dv'] else ""
+    data.append({"Mặt hàng": ten, "Đơn giá": f"{info['dg']:,.0f} đ", "Số lượng": sl, "Thành tiền": f"{tt:,.0f} đ"})
+df = pd.DataFrame(data)
+st.dataframe(df, use_container_width=True, hide_index=True)
 
-# ==================== SO SÁNH NĂM & THÁNG ====================
+# ==================== SO SÁNH THEO THỜI GIAN ====================
 st.markdown("---")
-st.subheader("So sánh tự động từ Google Sheets")
+st.subheader("📈 So sánh TVL theo thời gian")
 
 c1, c2 = st.columns(2)
 with c1:
@@ -181,4 +197,4 @@ with c4:
     tvl_thang_truoc = round(tong_tvl / (1 + thay_doi_thang_truoc), 1)
     st.metric("Tháng trước", f"{tvl_thang_truoc:,} triệu/tháng", f"+{thay_doi_thang_truoc*100:.1f}%")
 
-st.caption(f"Auto-update {datetime.now().strftime('%d/%m/%Y %H:%M')} • TVL Pro 2025 • by @Nhatminh")
+st.caption(f"🕒 Cập nhật: {datetime.now().strftime('%d/%m/%Y %H:%M')} • TVL Pro 2025 • by @Nhatminh")
