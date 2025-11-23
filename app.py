@@ -543,3 +543,9 @@ df_thuc_pham = pd.DataFrame(data)
 def color_source(val):
     if "REAL-TIME" in val:
         return 'background-color:
+def color_source(val):
+    if "REAL-TIME" in val:
+        return 'background-color: #d4edda; color: #155724; font-weight: bold;'
+    else:
+        return 'background-color: #f8f9fa; color: #6c757d;'
+
